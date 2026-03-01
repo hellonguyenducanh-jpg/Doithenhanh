@@ -3,33 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Đổi Thẻ Tự Động</title>
+    <title>Hệ Thống Đổi Thẻ Nhanh</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; display: flex; justify-content: center; padding: 20px; }
-        .card-box { background: #2d2d2d; width: 100%; max-width: 400px; padding: 25px; border-radius: 15px; border: 1px solid #444; }
-        h2 { text-align: center; color: #00ff88; text-transform: uppercase; }
-        label { display: block; margin-top: 15px; font-size: 13px; color: #aaa; }
-        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #444; border-radius: 8px; background: #1a1a1a; color: #fff; outline: none; }
-        .btn-process { width: 100%; padding: 15px; margin-top: 25px; background: #00ff88; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #loading { display: none; text-align: center; margin-top: 20px; }
-        #status { display: none; margin-top: 20px; padding: 15px; border-radius: 8px; text-align: center; }
-        .success { background: #004422; color: #00ff88; }
-        .error { background: #441111; color: #ff4444; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card-box { background: #1e1e1e; width: 100%; max-width: 380px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
+        h2 { text-align: center; color: #00ff88; margin-bottom: 25px; letter-spacing: 1px; }
+        label { display: block; margin-top: 15px; font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; }
+        select, input { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid #333; border-radius: 10px; background: #252525; color: #fff; box-sizing: border-box; font-size: 15px; }
+        input:focus { border-color: #00ff88; outline: none; }
+        .btn-process { width: 100%; padding: 15px; margin-top: 30px; background: #00ff88; color: #000; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .btn-process:hover { background: #00cc6e; transform: translateY(-2px); }
+        #loading { display: none; text-align: center; margin-top: 20px; color: #00ff88; font-style: italic; }
+        #status { display: none; margin-top: 20px; padding: 15px; border-radius: 10px; text-align: center; font-weight: 500; }
+        .success { background: rgba(0, 255, 136, 0.1); color: #00ff88; border: 1px solid #00ff88; }
+        .error { background: rgba(255, 68, 68, 0.1); color: #ff4444; border: 1px solid #ff4444; }
     </style>
 </head>
 <body>
 
 <div class="card-box">
-    <h2>Đổi Thẻ Nhanh</h2>
+    <h2>HỆ THỐNG ĐỔI THẺ</h2>
     
-    <label>Loại thẻ cào nạp vào:</label>
+    <label>1. Chọn loại thẻ cào:</label>
     <select id="type_in">
         <option value="VIETTEL">Viettel</option>
         <option value="VINAPHONE">Vinaphone</option>
         <option value="MOBIFONE">Mobifone</option>
     </select>
 
-    <label>Mệnh giá thẻ cào:</label>
+    <label>2. Mệnh giá thẻ:</label>
     <select id="amount">
         <option value="10000">10.000đ</option>
         <option value="20000">20.000đ</option>
@@ -39,55 +41,62 @@
         <option value="500000">500.000đ</option>
     </select>
 
-    <input type="text" id="seri" placeholder="Số Seri">
-    <input type="text" id="pin" placeholder="Mã thẻ">
+    <input type="text" id="seri" placeholder="Nhập số Seri thẻ">
+    <input type="text" id="pin" placeholder="Nhập mã thẻ (PIN)">
 
-    <label>Chọn loại thẻ muốn nhận:</label>
+    <label>3. Đổi sang loại thẻ game:</label>
     <select id="type_out">
         <option value="ZING">Nhận thẻ Zing (VNG)</option>
         <option value="GARENA">Nhận thẻ Garena</option>
     </select>
+
     <button class="btn-process" onclick="startExchange()">ĐỔI THẺ NGAY</button>
 
-    <div id="loading">Đang xử lý dữ liệu...</div>
+    <div id="loading">Vui lòng chờ giây lát...</div>
     <div id="status"></div>
 </div>
 
 <script>
     async function startExchange() {
-        const pin = document.getElementById('pin').value;
-        const seri = document.getElementById('seri').value;
+        const pin = document.getElementById('pin').value.trim();
+        const seri = document.getElementById('seri').value.trim();
         const type = document.getElementById('type_in').value;
         const amount = document.getElementById('amount').value;
-        const target = document.getElementById('type_out').value; // Lấy giá trị thẻ muốn nhận
-        const status = document.getElementById('status');
+        const target = document.getElementById('type_out').options[document.getElementById('type_out').selectedIndex].text;
+        const statusDiv = document.getElementById('status');
 
-        if(!pin || !seri) return alert("Vui lòng nhập đủ mã và seri!");
+        if(!pin || !seri) {
+            alert("Vui lòng điền đầy đủ mã thẻ và seri!");
+            return;
+        }
 
-        status.style.display = "none";
+        statusDiv.style.display = "none";
         document.getElementById('loading').style.display = "block";
 
         try {
-            // Đã bỏ dấu chấm ở đường dẫn theo yêu cầu
+            // Đã sửa đường dẫn fetch: KHÔNG CÓ DẤU CHẤM ở đầu
             const response = await fetch('/netlify/functions/send-card', {
                 method: 'POST',
-                body: JSON.stringify({ pin, seri, type, amount, target })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin, seri, type, amount })
             });
+            
             const data = await response.json();
-
             document.getElementById('loading').style.display = "none";
-            status.style.display = "block";
+            statusDiv.style.display = "block";
 
             if (data.status === 1 || data.status === 99) {
-                status.className = "success";
-                status.innerHTML = `<b>THÀNH CÔNG!</b><br>Thẻ đã gửi lên hệ thống. Đang duyệt đổi sang thẻ <b>${target}</b>. Vui lòng đợi trong giây lát!`;
+                statusDiv.className = "success";
+                statusDiv.innerHTML = `<b>GỬI THẺ THÀNH CÔNG!</b><br>Đang duyệt đổi sang <b>${target}</b>. Kết quả sẽ có sau 1-3 phút.`;
             } else {
-                status.className = "error";
-                status.innerHTML = "<b>LỖI:</b> " + (data.message || "Thẻ không hợp lệ");
+                statusDiv.className = "error";
+                statusDiv.innerHTML = "<b>LỖI:</b> " + (data.message || "Thẻ không hợp lệ hoặc đã dùng.");
             }
         } catch (e) {
             document.getElementById('loading').style.display = "none";
-            alert("Lỗi kết nối Server Netlify!");
+            statusDiv.style.display = "block";
+            statusDiv.className = "error";
+            statusDiv.innerHTML = "<b>LỖI KẾT NỐI:</b> Không thể gửi dữ liệu lên Server Netlify!";
         }
     }
 </script>
