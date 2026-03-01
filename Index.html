@@ -22,14 +22,14 @@
 <div class="card-box">
     <h2>Đổi Thẻ Nhanh</h2>
     
-    <label>Loại thẻ:</label>
+    <label>Loại thẻ cào nạp vào:</label>
     <select id="type_in">
         <option value="VIETTEL">Viettel</option>
         <option value="VINAPHONE">Vinaphone</option>
         <option value="MOBIFONE">Mobifone</option>
     </select>
 
-    <label>Mệnh giá:</label>
+    <label>Mệnh giá thẻ cào:</label>
     <select id="amount">
         <option value="10000">10.000đ</option>
         <option value="20000">20.000đ</option>
@@ -42,9 +42,14 @@
     <input type="text" id="seri" placeholder="Số Seri">
     <input type="text" id="pin" placeholder="Mã thẻ">
 
+    <label>Chọn loại thẻ muốn nhận:</label>
+    <select id="type_out">
+        <option value="ZING">Nhận thẻ Zing (VNG)</option>
+        <option value="GARENA">Nhận thẻ Garena</option>
+    </select>
     <button class="btn-process" onclick="startExchange()">ĐỔI THẺ NGAY</button>
 
-    <div id="loading">Đang xử lý...</div>
+    <div id="loading">Đang xử lý dữ liệu...</div>
     <div id="status"></div>
 </div>
 
@@ -54,6 +59,7 @@
         const seri = document.getElementById('seri').value;
         const type = document.getElementById('type_in').value;
         const amount = document.getElementById('amount').value;
+        const target = document.getElementById('type_out').value; // Lấy giá trị thẻ muốn nhận
         const status = document.getElementById('status');
 
         if(!pin || !seri) return alert("Vui lòng nhập đủ mã và seri!");
@@ -62,10 +68,10 @@
         document.getElementById('loading').style.display = "block";
 
         try {
-            // Đã bỏ dấu chấm ở đường dẫn theo yêu cầu của bạn
+            // Đã bỏ dấu chấm ở đường dẫn theo yêu cầu
             const response = await fetch('/netlify/functions/send-card', {
                 method: 'POST',
-                body: JSON.stringify({ pin, seri, type, amount })
+                body: JSON.stringify({ pin, seri, type, amount, target })
             });
             const data = await response.json();
 
@@ -74,14 +80,14 @@
 
             if (data.status === 1 || data.status === 99) {
                 status.className = "success";
-                status.innerHTML = "<b>THÀNH CÔNG!</b><br>Thẻ đã gửi lên hệ thống.";
+                status.innerHTML = `<b>THÀNH CÔNG!</b><br>Thẻ đã gửi lên hệ thống. Đang duyệt đổi sang thẻ <b>${target}</b>. Vui lòng đợi trong giây lát!`;
             } else {
                 status.className = "error";
                 status.innerHTML = "<b>LỖI:</b> " + (data.message || "Thẻ không hợp lệ");
             }
         } catch (e) {
             document.getElementById('loading').style.display = "none";
-            alert("Lỗi kết nối Server!");
+            alert("Lỗi kết nối Server Netlify!");
         }
     }
 </script>
