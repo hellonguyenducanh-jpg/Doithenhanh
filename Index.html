@@ -75,7 +75,7 @@
 
         try {
             // Đã sửa đường dẫn fetch: KHÔNG CÓ DẤU CHẤM ở đầu
-            const response = await fetch('/netlify/functions/send-card', {
+            const response = await fetch('/.netlify/functions/send-card', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pin, seri, type, amount })
