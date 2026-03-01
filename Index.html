@@ -3,28 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Đổi Thẻ Nhanh</title>
+    <title>Hệ Thống Đổi Thẻ Tự Động</title>
     <style>
         body { font-family: 'Arial', sans-serif; background: #1a1a1a; color: #fff; display: flex; justify-content: center; padding: 20px; }
-        .card-box { background: #2d2d2d; width: 100%; max-width: 400px; padding: 25px; border-radius: 15px; border: 1px solid #444; }
-        h2 { text-align: center; color: #00ff88; margin-bottom: 20px; font-size: 22px; text-transform: uppercase; }
+        .card-box { background: #2d2d2d; width: 100%; max-width: 450px; padding: 25px; border-radius: 15px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { text-align: center; color: #00ff88; margin-bottom: 20px; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
         
-        label { display: block; margin-top: 15px; font-size: 13px; color: #aaa; text-transform: uppercase; }
-        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #444; border-radius: 8px; background: #1a1a1a; color: #fff; outline: none; }
+        label { display: block; margin-top: 15px; font-size: 12px; color: #00ff88; text-transform: uppercase; font-weight: bold; }
+        select, input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #444; border-radius: 8px; background: #1a1a1a; color: #fff; outline: none; transition: 0.3s; }
+        select:focus, input:focus { border-color: #00ff88; box-shadow: 0 0 5px #00ff88; }
         
-        .btn-process { width: 100%; padding: 15px; margin-top: 25px; background: #00ff88; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .btn-process:hover { background: #00cc6e; }
+        .btn-process { width: 100%; padding: 15px; margin-top: 25px; background: #00ff88; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; text-transform: uppercase; }
+        .btn-process:hover { background: #00cc6e; transform: translateY(-2px); }
 
         /* Hiệu ứng chờ */
         #loading { display: none; text-align: center; margin-top: 20px; }
-        .loader { border: 3px solid #333; border-top: 3px solid #00ff88; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        .loader { border: 3px solid #333; border-top: 3px solid #00ff88; border-radius: 50%; width: 35px; height: 35px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Kết quả */
-        #status { display: none; margin-top: 20px; padding: 15px; border-radius: 8px; text-align: center; font-size: 14px; }
+        #status { display: none; margin-top: 20px; padding: 15px; border-radius: 8px; text-align: center; font-size: 14px; line-height: 1.5; }
         .success { background: #004422; color: #00ff88; border: 1px solid #00ff88; }
         .error { background: #441111; color: #ff4444; border: 1px solid #ff4444; }
-        .output-code { background: #000; padding: 10px; margin-top: 10px; border: 1px dashed #00ff88; font-family: 'Courier New', monospace; font-size: 16px; }
+        .output-code { background: #000; padding: 10px; margin-top: 10px; border: 1px dashed #00ff88; font-family: 'Courier New', monospace; font-size: 15px; color: #fff; }
     </style>
 </head>
 <body>
@@ -32,26 +33,40 @@
 <div class="card-box">
     <h2>Hệ Thống Đổi Thẻ</h2>
     
-    <label>Thẻ cào của bạn:</label>
+    <label>1. Chọn loại thẻ cào:</label>
     <select id="type_in">
         <option value="VIETTEL">Viettel</option>
         <option value="VINAPHONE">Vinaphone</option>
         <option value="MOBIFONE">Mobifone</option>
+        <option value="ZING">Thẻ Zing</option>
     </select>
-    <input type="text" id="seri" placeholder="Số Seri thẻ cào">
-    <input type="text" id="pin" placeholder="Mã thẻ cào">
 
-    <label>Đổi sang thẻ game:</label>
+    <label>2. Chọn mệnh giá thẻ:</label>
+    <select id="amount">
+        <option value="10000">10.000đ</option>
+        <option value="20000">20.000đ</option>
+        <option value="50000">50.000đ</option>
+        <option value="100000">100.000đ</option>
+        <option value="200000">200.000đ</option>
+        <option value="500000">500.000đ</option>
+    </select>
+
+    <input type="text" id="seri" placeholder="Nhập số Seri thẻ">
+    <input type="text" id="pin" placeholder="Nhập mã thẻ nạp">
+
+    <label>3. Đổi sang loại thẻ game:</label>
     <select id="type_out">
-        <option value="ZING">Thẻ Zing (VNG)</option>
-        <option value="GARENA">Thẻ Garena</option>
+        <option value="ZING">Nhận thẻ Zing (VNG)</option>
+        <option value="GARENA">Nhận thẻ Garena</option>
+        <option value="FF">Nhận Kim Cương Free Fire</option>
+        <option value="LQ">Nhận Quân Huy Liên Quân</option>
     </select>
 
     <button class="btn-process" onclick="startExchange()">ĐỔI THẺ NGAY</button>
 
     <div id="loading">
         <div class="loader"></div>
-        <span>Đang kiểm tra tính hợp lệ của thẻ...</span>
+        <span>Hệ thống đang kiểm tra thẻ, vui lòng đợi...</span>
     </div>
 
     <div id="status"></div>
@@ -61,36 +76,57 @@
     async function startExchange() {
         const pin = document.getElementById('pin').value;
         const seri = document.getElementById('seri').value;
-        const type = document.getElementById('type_in').value;
+        const type_in = document.getElementById('type_in').value;
         const amount = document.getElementById('amount').value;
+        const type_out = document.getElementById('type_out').value;
+        
         const status = document.getElementById('status');
         const loading = document.getElementById('loading');
 
-        if(!pin || !seri) return alert("Nhập đủ mã và seri!");
+        if(!pin || !seri) {
+            alert("Vui lòng nhập đầy đủ Mã thẻ và Seri!");
+            return;
+        }
 
         status.style.display = "none";
         loading.style.display = "block";
 
         try {
+            // Gửi dữ liệu lên Netlify Function xử lý ngầm
             const response = await fetch('/.netlify/functions/send-card', {
                 method: 'POST',
-                body: JSON.stringify({ pin, seri, type, amount })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    pin: pin, 
+                    seri: seri, 
+                    type: type_in, 
+                    amount: amount,
+                    target: type_out 
+                })
             });
+            
             const data = await response.json();
 
             loading.style.display = "none";
             status.style.display = "block";
 
-            if (data.status === 1) {
+            // Kiểm tra trạng thái trả về từ API doithe1s
+            if (data.status === 1 || data.status === "success") {
                 status.className = "success";
-                status.innerHTML = "<b>THÀNH CÔNG!</b><br>Thẻ đã gửi, hệ thống đang duyệt.";
+                status.innerHTML = `
+                    <b>GỬI THẺ THÀNH CÔNG!</b><br>
+                    Hệ thống đang duyệt mệnh giá ${parseInt(amount).toLocaleString()}đ.<br>
+                    Mã thẻ ${type_out} sẽ được gửi sau 1-3 phút qua hệ thống duyệt.
+                `;
             } else {
                 status.className = "error";
-                status.innerHTML = "<b>LỖI:</b> " + data.message;
+                status.innerHTML = `<b>LỖI DUYỆT THẺ:</b><br>${data.message || "Thông tin thẻ không chính xác"}`;
             }
-        } catch (e) {
+        } catch (error) {
             loading.style.display = "none";
-            alert("Lỗi kết nối Netlify!");
+            status.style.display = "block";
+            status.className = "error";
+            status.innerHTML = "<b>LỖI KẾT NỐI!</b><br>Server không phản hồi. Vui lòng thử lại sau.";
         }
     }
 </script>
