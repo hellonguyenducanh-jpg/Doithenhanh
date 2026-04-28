@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PTG Bank - Biometric Pro</title>
+    <title>PTG Bank - One Tap QR Edition</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -12,57 +12,106 @@
     <script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
 
     <style>
-        :root { --primary: #004aad; --bg: #f4f7f6; --success: #28a745; --ios-red: #ff3b30; --ios-gray: #e5e5ea; }
+        :root { --primary: #004aad; --accent: #ffcc00; --bg: #f4f7f6; --success: #28a745; --dark: #1a1a1a; }
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background: #121212; margin: 0; display: flex; justify-content: center; }
-        .app-frame { width: 100%; max-width: 414px; height: 100vh; background: var(--bg); position: relative; overflow: hidden; }
+        .app-frame { width: 100%; max-width: 414px; height: 100vh; background: var(--bg); position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
         .screen { display: none; padding: 20px; height: 100%; overflow-y: auto; }
         .active { display: block; }
         
-        /* GIAO DIỆN THIẾT LẬP VÂN TAY (DÀNH CHO ĐĂNG KÝ) */
-        .fp-setup-overlay { display: none; position: absolute; inset: 0; background: #fff; z-index: 9999; flex-direction: column; align-items: center; padding: 60px 30px; }
-        .fp-svg-box { position: relative; width: 150px; height: 180px; margin: 40px 0; cursor: pointer; }
-        .fp-svg-path { width: 100%; height: 100%; fill: var(--ios-gray); position: absolute; }
-        .fp-active-path { width: 100%; height: 100%; fill: var(--ios-red); position: absolute; clip-path: inset(100% 0 0 0); transition: clip-path 0.3s ease; }
-
-        /* BILL VCB GIỮ NGUYÊN */
-        #scr-receipt { padding: 0; background: #011627; color: white; text-align: center; }
-        .vcb-check { width: 50px; height: 50px; background: #76b82a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 40px auto 15px; font-size: 24px; }
+        /* --- PHẦN CHỈNH SỬA: GIAO DIỆN BILL VCB --- */
+        #scr-receipt { padding: 0; background: #011627; }
+        .receipt-container { 
+            background: #011627; 
+            min-height: 100%; 
+            color: white; 
+            text-align: center; 
+            position: relative;
+            padding: 40px 20px;
+        }
+        .vcb-header { margin-bottom: 20px; font-weight: bold; font-size: 18px; letter-spacing: 1px; }
+        .vcb-check { 
+            width: 50px; height: 50px; background: #76b82a; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            margin: 0 auto 15px; font-size: 24px; color: white;
+        }
+        .vcb-status { color: #ffffff; font-size: 14px; text-transform: uppercase; margin-bottom: 5px; opacity: 0.9; }
+        .vcb-amount { color: #76b82a; font-size: 28px; font-weight: bold; margin-bottom: 5px; }
+        .vcb-time { font-size: 12px; color: #aaa; margin-bottom: 30px; }
         
-        /* CÁC THÀNH PHẦN KHÁC */
+        .vcb-info-table { text-align: left; border-top: 0.5px solid rgba(255,255,255,0.1); }
+        .vcb-row { 
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 15px 0; border-bottom: 0.5px solid rgba(255,255,255,0.1); 
+            font-size: 14px; 
+        }
+        .vcb-label { color: #aaa; width: 40%; }
+        .vcb-value { color: #fff; width: 60%; text-align: right; font-weight: 500; }
+        
+        .vcb-footer-bg {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 150px;
+            background: linear-gradient(transparent, #004a1a); opacity: 0.4; pointer-events: none;
+        }
+        .vcb-btn-home {
+            position: relative; z-index: 10; width: 90%; background: #76b82a; 
+            color: white; border: none; padding: 15px; border-radius: 8px;
+            font-weight: bold; margin: 20px auto; display: block; cursor: pointer;
+        }
+        /* --- KẾT THÚC PHẦN CSS BILL --- */
+
         .modal-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 5000; align-items: center; justify-content: center; }
-        .modal-box { background: white; width: 85%; padding: 25px; border-radius: 15px; text-align: center; color: #000; }
+        .modal-box { background: white; width: 85%; padding: 25px; border-radius: 15px; text-align: center; }
         #loader-screen { display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.9); z-index: 6000; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .card-main { background: linear-gradient(135deg, #004aad, #00c6ff); color: white; padding: 25px; border-radius: 20px; margin: 15px 0; }
-        .vcb-row { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 0.5px solid rgba(255,255,255,0.1); font-size: 14px; }
+        .grid-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+        .nav-box { text-align: center; font-size: 10px; font-weight: 600; cursor: pointer; }
+        .nav-icon { background: white; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px; font-size: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .bell-box { position: relative; font-size: 24px; cursor: pointer; }
+        .bell-badge { position: absolute; top: -5px; right: -5px; background: red; color: white; font-size: 10px; padding: 2px 5px; border-radius: 50%; border: 2px solid var(--bg); }
+        .kyc-preview { width:100%; height:120px; border: 2px dashed #ccc; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #eee; margin-top: 5px; cursor: pointer; position: relative; }
+        .kyc-preview img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
+        .avatar-uploader { border: 1px solid #ddd; padding: 10px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: #f9f9f9; }
     </style>
 </head>
 <body>
 
 <div class="app-frame">
-    <div id="fp-setup-screen" class="fp-setup-overlay">
-        <h2 id="fps-title" style="color:#000">Thiết lập vân tay</h2>
-        <p id="fps-desc" style="color:#666; text-align:center">Nhấp nhả ngón tay để lấy dấu vân tay của bạn.</p>
-        <div class="fp-svg-box" onclick="stepEnroll()">
-            <svg class="fp-svg-path" viewBox="0 0 100 120"><path d="M50,10 C30,10 10,30 10,60 C10,90 30,110 50,110 C70,110 90,90 90,60 C90,30 70,10 50,10 M50,25 C65,25 78,38 78,55 C78,72 65,85 50,85 C35,85 22,72 22,55 C22,38 35,25 50,25 M50,40 C58,40 65,47 65,55 C65,63 58,70 50,70 C42,70 35,63 35,55 C35,47 42,40 50,40" /></svg>
-            <svg class="fp-active-path" id="fps-fill" viewBox="0 0 100 120"><path d="M50,10 C30,10 10,30 10,60 C10,90 30,110 50,110 C70,110 90,90 90,60 C90,30 70,10 50,10 M50,25 C65,25 78,38 78,55 C78,72 65,85 50,85 C35,85 22,72 22,55 C22,38 35,25 50,25 M50,40 C58,40 65,47 65,55 C65,63 58,70 50,70 C42,70 35,63 35,55 C35,47 42,40 50,40" /></svg>
+    <div id="admin-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Xác thực Admin</h3>
+            <input type="password" id="admin-password-input" placeholder="Mật khẩu Admin">
+            <button class="btn" onclick="verifyAdminAccess()">XÁC NHẬN</button>
+            <button class="btn" style="background:#eee; color:#333" onclick="closeModal('admin-modal')">HỦY</button>
         </div>
-        <div id="fps-percent" style="font-size:24px; color:#000; font-weight:bold">0%</div>
     </div>
-
-    <div id="loader-screen"><div class="spinner"></div><p id="loader-text" style="color:#000; margin-top:10px;"></p></div>
-    <div id="ai-result-board" class="modal-overlay"><div class="modal-box"><h3>XÁC THỰC AI</h3><div id="ai-info-detail"></div><button class="btn" onclick="finalConfirm(true)">ĐÚNG, LÀ TÔI</button></div></div>
+    <div id="pin-popup" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Xác thực giao dịch</h3>
+            <input type="password" id="modal-pin-input" placeholder="••••••" style="text-align:center; letter-spacing:5px">
+            <button class="btn" onclick="checkPinStep()">XÁC NHẬN</button>
+            <button class="btn" style="background:#eee; color:#333" onclick="closeModal('pin-popup')">HỦY</button>
+        </div>
+    </div>
+    <div id="ai-result-board" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="color: var(--primary); margin-top: 0;">XÁC THỰC AI</h3>
+            <div id="ai-info-detail" style="text-align: left; font-size: 13px; background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 15px; line-height: 1.6;"></div>
+            <button class="btn" style="background: var(--success)" onclick="finalConfirm(true)">ĐÚNG, LÀ TÔI</button>
+            <button class="btn" style="background:#ccc; color:#333; margin-top:5px;" onclick="finalConfirm(false)">CHỤP LẠI</button>
+        </div>
+    </div>
+    <div id="loader-screen"><div class="spinner"></div><p id="loader-text" style="margin-top:15px; font-weight:bold;"></p></div>
 
     <div id="scr-login" class="screen active">
         <h2 style="color:var(--primary); text-align:center; margin-top:60px;">ĐĂNG NHẬP PTG</h2>
         <input type="tel" id="login-phone" placeholder="Số điện thoại">
         <input type="password" id="login-pin" placeholder="Mã PIN">
-        <button class="btn" onclick="authRealSystem('LOGIN')">ĐĂNG NHẬP (QUÉT VÂN TAY THẬT)</button>
-        <p style="text-align:center; font-size:14px; margin-top:20px;">Chưa có tài khoản? <a href="#" onclick="showPage('scr-reg')" style="color:var(--primary); font-weight:bold;">Đăng ký ngay</a></p>
+        <button class="btn" onclick="callSystemAuth('LOGIN')">ĐĂNG NHẬP</button>
+        <p style="text-align:center; font-size:14px; margin-top:20px;">Chưa có tài khoản? <a href="#" onclick="showPage('scr-reg')" style="color:var(--primary); font-weight:bold; text-decoration:none;">Đăng ký ngay</a></p>
     </div>
 
     <div id="scr-reg" class="screen">
@@ -70,147 +119,334 @@
         <input type="text" id="reg-name" placeholder="Họ và tên">
         <input type="tel" id="reg-phone" placeholder="Số điện thoại">
         <input type="password" id="reg-pin" placeholder="Mã PIN">
-        <button class="btn" onclick="startEnrollProcess()">THIẾT LẬP VÂN TAY</button>
+        <button class="btn" onclick="callSystemAuth('REG')">TIẾP TỤC</button>
+        <button class="btn" style="background:#666" onclick="showPage('scr-login')">THOÁT</button>
     </div>
 
     <div id="scr-ekyc" class="screen">
         <h3>XÁC MINH CCCD</h3>
-        <div style="background:#eee; height:100px; margin-bottom:10px; display:flex; align-items:center; justify-content:center; border-radius:10px;" onclick="document.getElementById('f-in').click()">Mặt trước CCCD</div>
-        <input type="file" id="f-in" hidden accept="image/*">
-        <button class="btn" onclick="startAIScan()">QUÉT AI</button>
+        <div class="kyc-preview" onclick="document.getElementById('f-in').click()">
+            <span id="txt-f">📸 Mặt trước CCCD</span>
+            <input type="file" id="f-in" hidden accept="image/*" onchange="previewImg(this, 'pre-f', 'txt-f')">
+            <img id="pre-f" style="display:none">
+        </div>
+        <div class="kyc-preview" onclick="document.getElementById('b-in').click()" style="margin-top:10px">
+            <span id="txt-b">📸 Mặt sau CCCD</span>
+            <input type="file" id="b-in" hidden accept="image/*" onchange="previewImg(this, 'pre-b', 'txt-b')">
+            <img id="pre-b" style="display:none">
+        </div>
+        <button class="btn" style="background:var(--success)" onclick="startAIScan()">QUÉT AI</button>
     </div>
 
     <div id="scr-home" class="screen">
+        <div style="display:flex; justify-content: space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img id="user-avatar-main" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--primary)">
+                <b id="hi-name">USER</b>
+            </div>
+            <div class="bell-box" onclick="showPage('scr-notif')">🔔<span id="notif-count" class="bell-badge" style="display:none">0</span></div>
+        </div>
         <div class="card-main">
-            <h2 id="hi-name">USER</h2>
+            <small>Số dư khả dụng</small>
             <h1 id="bal-val">0 ₫</h1>
             <p id="stk-val">STK: --------</p>
         </div>
-        <button class="btn" onclick="showPage('scr-transfer')">CHUYỂN TIỀN</button>
-        <button class="btn" style="background:#ff4d4d; margin-top:10px;" onclick="handleLogout()">ĐĂNG XUẤT</button>
+        <div class="grid-nav">
+            <div class="nav-box" onclick="showPage('scr-transfer')"><div class="nav-icon">💸</div>Chuyển tiền</div>
+            <div class="nav-box" onclick="document.getElementById('qr-scan-input').click()"><div class="nav-icon">📸</div>Quét mã</div>
+            <div class="nav-box" onclick="openAdminModal()"><div class="nav-icon">🏦</div>Nạp tiền</div>
+            <div class="nav-box" onclick="showPage('scr-settings')"><div class="nav-icon">⚙️</div>Cài đặt</div>
+        </div>
+        <div style="margin-top:30px; text-align:center;">
+            <div id="my-qr" style="display:inline-block; background:white; padding:15px; border-radius:15px;"></div>
+        </div>
+    </div>
+
+    <div id="scr-notif" class="screen">
+        <div style="display:flex; justify-content: space-between; align-items:center;">
+            <h3>Thông báo</h3>
+            <button onclick="exitNotif()" style="border:none; background:none; font-size:24px; color:var(--primary)">×</button>
+        </div>
+        <div id="notif-list"></div>
+    </div>
+
+    <div id="scr-settings" class="screen">
+        <h3>Cài đặt</h3>
+        <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px;">
+            <p style="font-size:12px; font-weight:bold; margin-bottom:5px;">CẬP NHẬT HỒ SƠ</p>
+            <input type="text" id="update-name" placeholder="Tên hiển thị mới">
+            <div class="avatar-uploader" onclick="document.getElementById('avatar-file-input').click()">
+                <span id="avatar-status-text" style="font-size:14px; color:#666;">📁 Chọn ảnh đại diện</span>
+                <input type="file" id="avatar-file-input" hidden accept="image/*" onchange="handleAvatarSelect(this)">
+            </div>
+            <button class="btn" style="background:var(--success)" onclick="updateProfile()">LƯU THAY ĐỔI</button>
+        </div>
+        <button class="btn" style="background:#ff4d4d;" onclick="handleLogout()">ĐĂNG XUẤT</button>
+        <button class="btn" style="background:#666;" onclick="showPage('scr-home')">QUAY LẠI</button>
     </div>
 
     <div id="scr-transfer" class="screen">
         <h3>Chuyển khoản</h3>
         <input type="text" id="to-stk" placeholder="STK người nhận" oninput="autoCheckSTK()">
-        <div id="display-receiver-name" style="font-weight:bold; color:var(--primary)"></div>
+        <div id="display-receiver-name" style="font-size:13px; font-weight:bold; color:var(--primary); display:none; margin-bottom:10px;"></div>
         <input type="number" id="to-amount" placeholder="Số tiền">
-        <button class="btn" onclick="authRealSystem('TRANSFER')">XÁC NHẬN (QUÉT VÂN TAY THẬT)</button>
+        <button class="btn" onclick="callSystemAuth('TRANSFER')">CHUYỂN KHOẢN NGAY</button>
+        <button class="btn" style="background:#666" onclick="showPage('scr-home')">HỦY</button>
     </div>
 
     <div id="scr-receipt" class="screen">
-        <div class="vcb-check">✔</div>
-        <div style="text-transform: uppercase; font-size:14px;">Chuyển khoản thành công</div>
-        <h1 id="rec-amt" style="color:#76b82a;">0 VND</h1>
-        <div id="receipt-content"></div>
-        <button class="btn" style="background:#76b82a; margin: 20px;" onclick="location.reload()">VỀ TRANG CHỦ</button>
+        <div class="receipt-container" id="receipt-content">
+            </div>
     </div>
+
+    <input type="file" id="qr-scan-input" style="display:none" accept="image/*" onchange="readQRFromFile(this)">
 </div>
 
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyAMxWXDkmGiVKfT8NYcMg3Pp_ENaI43etk", databaseURL: "https://ptg-bank-default-rtdb.asia-southeast1.firebasedatabase.app" };
+    const firebaseConfig = {
+      apiKey: "AIzaSyAMxWXDkmGiVKfT8NYcMg3Pp_ENaI43etk",
+      databaseURL: "https://ptg-bank-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let currentUser = null, validatedReceiverPhone = "", validatedReceiverName = "", enrollProgress = 0;
 
-    // --- 1. THIẾT LẬP VÂN TAY (KHI ĐĂNG KÝ) ---
-    function startEnrollProcess() {
-        if(!document.getElementById('reg-name').value) return alert("Nhập tên!");
-        enrollProgress = 0;
-        document.getElementById('fp-setup-screen').style.display = 'flex';
-    }
-    function stepEnroll() {
-        if(enrollProgress >= 100) return;
-        enrollProgress += 10;
-        document.getElementById('fps-fill').style.clipPath = `inset(${100 - enrollProgress}% 0 0 0)`;
-        document.getElementById('fps-percent').innerText = enrollProgress + "%";
-        if(enrollProgress === 50) document.getElementById('fps-title').innerText = "Quét các cạnh bên...";
-        if(enrollProgress >= 100) {
-            setTimeout(() => { 
-                document.getElementById('fp-setup-screen').style.display = 'none'; 
-                showPage('scr-ekyc'); 
-            }, 500);
-        }
-    }
+    let currentUser = null;
+    let validatedReceiverPhone = "";
+    let validatedReceiverName = "";
+    let selectedAvatarBase64 = "";
 
-    // --- 2. QUÉT VÂN TAY THẬT (KHI ĐĂNG NHẬP & CHUYỂN TIỀN) ---
-    async function authRealSystem(type) {
-        if(!window.PublicKeyCredential) {
-            alert("Trình duyệt không hỗ trợ quét vân tay thật. Đang dùng PIN dự phòng.");
-            type === 'LOGIN' ? handleLogin() : finalizeTransfer();
-            return;
-        }
-        try {
-            // Đây là lệnh gọi bảng quét thật của iPhone/Android
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-            const options = { publicKey: { 
-                challenge: challenge, rp: { name: "PTG Bank" }, 
-                user: { id: new Uint8Array([1]), name: "user", displayName: "User" },
-                pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
-            }};
-            const credential = await navigator.credentials.get(options);
-            if(credential) {
-                type === 'LOGIN' ? handleLogin() : finalizeTransfer();
+    // --- HÀM XÁC THỰC VÂN TAY/KHUÔN MẶT HỆ THỐNG ---
+    async function callSystemAuth(action) {
+        if(action === 'LOGIN' && (!document.getElementById('login-phone').value || !document.getElementById('login-pin').value)) return alert("Vui lòng nhập đủ SĐT và PIN!");
+        if(action === 'REG' && !document.getElementById('reg-name').value) return alert("Vui lòng điền họ tên!");
+        if(action === 'TRANSFER' && (!validatedReceiverPhone || !document.getElementById('to-amount').value)) return alert("Vui lòng nhập thông tin người nhận!");
+
+        if (window.PublicKeyCredential) {
+            try {
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+                const options = {
+                    publicKey: {
+                        challenge: challenge,
+                        rp: { name: "PTG Bank" },
+                        user: { id: new Uint8Array([1]), name: "user", displayName: "User" },
+                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                        timeout: 60000
+                    }
+                };
+                const credential = await navigator.credentials.create(options);
+                if (credential) {
+                    if(action === 'LOGIN') handleLogin();
+                    if(action === 'REG') showPage('scr-ekyc');
+                    if(action === 'TRANSFER') preTransferLoad();
+                }
+            } catch (e) {
+                // Nếu bị hủy, không làm gì cả để người dùng có thể bấm lại
+                console.log("Xác thực bị dừng hoặc hủy.");
             }
-        } catch (e) {
-            alert("Xác thực thất bại hoặc bị hủy. (Lưu ý: Cần HTTPS để gọi bảng thật)");
+        } else {
+            // Trường hợp trình duyệt/thiết bị không hỗ trợ thì chạy thẳng logic
+            if(action === 'LOGIN') handleLogin();
+            if(action === 'REG') showPage('scr-ekyc');
+            if(action === 'TRANSFER') preTransferLoad();
         }
     }
 
-    // --- LOGIC HỆ THỐNG GIỮ NGUYÊN ---
+    function readQRFromFile(input) {
+        if (!input.files[0]) return;
+        loading(true, "Đang nhận diện mã QR...");
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = img.width; canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                loading(false);
+                if (code) {
+                    showPage('scr-transfer');
+                    document.getElementById('to-stk').value = code.data;
+                    autoCheckSTK();
+                } else alert("Không tìm thấy mã QR!");
+                input.value = "";
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function handleAvatarSelect(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                selectedAvatarBase64 = e.target.result;
+                document.getElementById('avatar-status-text').innerText = "✅ Đã chọn ảnh";
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function updateProfile() {
+        const newName = document.getElementById('update-name').value;
+        if(!newName && !selectedAvatarBase64) return alert("Chưa có thay đổi!");
+        loading(true, "Đang lưu...");
+        const updates = {};
+        if(newName) updates['name'] = newName;
+        if(selectedAvatarBase64) updates['avatar'] = selectedAvatarBase64;
+        db.ref('users/' + currentUser.phone).update(updates).then(() => {
+            loading(false);
+            alert("Cập nhật thành công!");
+        });
+    }
+
+    function exitNotif() {
+        document.getElementById('notif-count').style.display = 'none';
+        document.getElementById('notif-count').innerText = '0';
+        showPage('scr-home');
+    }
+
+    function openAdminModal() { document.getElementById('admin-modal').style.display = 'flex'; }
+    function verifyAdminAccess() {
+        if(document.getElementById('admin-password-input').value === 'admin123') {
+            closeModal('admin-modal');
+            let amt = prompt("Nạp bao nhiêu?");
+            if(amt > 0) db.ref('users/'+currentUser.phone+'/balance').transaction(b => (b||0) + parseInt(amt));
+        } else alert("Sai Pass Admin!");
+    }
+
+    function previewImg(i, imgId, txtId) { if (i.files && i.files[0]) { const r = new FileReader(); r.onload = e => { document.getElementById(imgId).src = e.target.result; document.getElementById(imgId).style.display = 'block'; document.getElementById(txtId).style.display = 'none'; }; r.readAsDataURL(i.files[0]); } }
+    
+    async function startAIScan() {
+        const f = document.getElementById('f-in').files[0];
+        if(!f || !document.getElementById('b-in').files[0]) return alert("Chụp đủ 2 mặt!");
+        loading(true, "AI đang quét...");
+        try {
+            const res = await Tesseract.recognize(f, 'vie');
+            const match = res.data.text.match(/\d{12}/);
+            loading(false);
+            if(!match) return alert("Ảnh mờ quá, chụp lại đi!");
+            document.getElementById('ai-info-detail').innerHTML = `<b>CCCD:</b> ${match[0]}<br><b>Tên:</b> ${document.getElementById('reg-name').value.toUpperCase()}`;
+            document.getElementById('ai-result-board').style.display = 'flex';
+        } catch (e) { loading(false); alert("Lỗi AI!"); }
+    }
+
+    function finalConfirm(isTrue) {
+        closeModal('ai-result-board');
+        if(isTrue) {
+            loading(true, "Đang tạo tài khoản...");
+            const n = document.getElementById('reg-name').value, p = document.getElementById('reg-phone').value, pi = document.getElementById('reg-pin').value;
+            const data = { name: n, phone: p, pin: pi, balance: 50000, stk: "PTG" + Math.floor(100000 + Math.random()*900000), avatar: "" };
+            db.ref('users/' + p).set(data).then(() => location.reload());
+        } else showPage('scr-ekyc');
+    }
+
+    function preTransferLoad() {
+        if(!validatedReceiverPhone) return alert("Chưa có người nhận!");
+        loading(true, "Kiểm tra an toàn...");
+        setTimeout(() => { loading(false); document.getElementById('pin-popup').style.display='flex'; }, 3000);
+    }
+    function checkPinStep() {
+        if(document.getElementById('modal-pin-input').value === currentUser.pin) {
+            closeModal('pin-popup'); loading(true, "Đang chuyển tiền..."); setTimeout(finalizeTransfer, 2000);
+        } else alert("Sai mã PIN!");
+    }
+
+    function finalizeTransfer() {
+        const amt = parseInt(document.getElementById('to-amount').value);
+        if(amt > currentUser.balance) { loading(false); return alert("Hết tiền rồi!"); }
+        db.ref('users/'+currentUser.phone+'/balance').transaction(b => b - amt);
+        db.ref('users/'+validatedReceiverPhone+'/balance').transaction(b => b + amt);
+        const log = `${new Date().getHours()}:${new Date().getMinutes()} - ${new Date().getDate()}/${new Date().getMonth()+1}`;
+        db.ref('notifications/'+currentUser.phone).push({ msg: `Chuyển ${amt.toLocaleString()}đ cho ${validatedReceiverName}`, time: log });
+        db.ref('notifications/'+validatedReceiverPhone).push({ msg: `Nhận ${amt.toLocaleString()}đ từ ${currentUser.name}`, time: log });
+        renderReceipt(amt); loading(false);
+    }
+
+    function renderReceipt(amt) {
+        const now = new Date();
+        const timeStr = `${now.getHours()}:${now.getMinutes()} Thứ ${now.getDay() + 1 === 1 ? 'CN' : 'Hai'} ${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+        
+        document.getElementById('receipt-content').innerHTML = `
+            <div class="vcb-header">PTG BANK</div>
+            <div class="vcb-check">✔</div>
+            <div class="vcb-status">Chuyển khoản thành công</div>
+            <div class="vcb-amount">${amt.toLocaleString()} VND</div>
+            <div class="vcb-time">${timeStr}</div>
+            
+            <div class="vcb-info-table">
+                <div class="vcb-row">
+                    <span class="vcb-label">Tên người thụ hưởng</span>
+                    <span class="vcb-value">${validatedReceiverName.toUpperCase()}</span>
+                </div>
+                <div class="vcb-row">
+                    <span class="vcb-label">Tài khoản thụ hưởng</span>
+                    <span class="vcb-value">${document.getElementById('to-stk').value}</span>
+                </div>
+                <div class="vcb-row">
+                    <span class="vcb-label">Ngân hàng thụ hưởng</span>
+                    <span class="vcb-value">PTG BANK</span>
+                </div>
+                <div class="vcb-row">
+                    <span class="vcb-label">Mã giao dịch</span>
+                    <span class="vcb-value">${Math.floor(Math.random()*900000000) + 100000000}</span>
+                </div>
+                <div class="vcb-row">
+                    <span class="vcb-label">Nội dung</span>
+                    <span class="vcb-value">${currentUser.name.toUpperCase()} chuyen tien</span>
+                </div>
+            </div>
+            
+            <div class="vcb-footer-bg"></div>
+            <button class="vcb-btn-home" onclick="location.reload()">Thực hiện giao dịch mới</button>
+        `;
+        showPage('scr-receipt');
+    }
+
     function handleLogin() {
         const p = document.getElementById('login-phone').value, pi = document.getElementById('login-pin').value;
         db.ref('users/'+p).once('value').then(s => {
             if(s.exists() && s.val().pin === pi) { localStorage.setItem('ptg_phone', p); startSession(p); }
-            else alert("Sai thông tin!");
+            else alert("Sai tài khoản/mật khẩu!");
         });
     }
-    function finalizeTransfer() {
-        const amt = parseInt(document.getElementById('to-amount').value);
-        if(amt > currentUser.balance) return alert("Hết tiền!");
-        db.ref('users/'+currentUser.phone+'/balance').transaction(b => b - amt);
-        db.ref('users/'+validatedReceiverPhone+'/balance').transaction(b => b + amt);
-        document.getElementById('rec-amt').innerText = amt.toLocaleString() + " VND";
-        document.getElementById('receipt-content').innerHTML = `
-            <div class="vcb-row"><span>Người nhận</span><span>${validatedReceiverName}</span></div>
-            <div class="vcb-row"><span>Nội dung</span><span>Chuyển tiền PTG</span></div>`;
-        showPage('scr-receipt');
-    }
+
     function startSession(phone) {
         db.ref('users/'+phone).on('value', s => {
-            currentUser = s.val(); showPage('scr-home');
+            currentUser = s.val();
+            showPage('scr-home');
             document.getElementById('hi-name').innerText = currentUser.name.toUpperCase();
             document.getElementById('bal-val').innerText = currentUser.balance.toLocaleString() + " ₫";
             document.getElementById('stk-val').innerText = "STK: " + currentUser.stk;
+            if(currentUser.avatar) document.getElementById('user-avatar-main').src = currentUser.avatar;
+            document.getElementById('my-qr').innerHTML = "";
+            new QRCode(document.getElementById("my-qr"), { text: currentUser.stk, width: 120, height: 120 });
+        });
+        db.ref('notifications/'+phone).on('value', s => {
+            const list = document.getElementById('notif-list');
+            const badge = document.getElementById('notif-count');
+            list.innerHTML = ""; let c = 0;
+            s.forEach(child => { c++; list.innerHTML = `<div style="background:white; padding:10px; border-radius:10px; margin-bottom:8px; border-left:4px solid var(--primary); font-size:12px;"><b>${child.val().time}</b><br>${child.val().msg}</div>` + list.innerHTML; });
+            if(c > 0) { badge.style.display = "block"; badge.innerText = c; }
         });
     }
+
     function autoCheckSTK() {
-        const stk = document.getElementById('to-stk').value;
+        const stk = document.getElementById('to-stk').value, nb = document.getElementById('display-receiver-name');
         if(stk.length >= 5) {
             db.ref('users').once('value').then(snap => {
-                snap.forEach(c => { if(c.val().stk === stk) { 
-                    validatedReceiverName = c.val().name; 
-                    validatedReceiverPhone = c.key; 
-                    document.getElementById('display-receiver-name').innerText = "✅ " + validatedReceiverName; 
-                }});
+                let found = false;
+                snap.forEach(c => { if(c.val().stk === stk) { validatedReceiverName = c.val().name; validatedReceiverPhone = c.key; nb.style.display="block"; nb.innerText="✅ "+c.val().name.toUpperCase(); found=true; }});
+                if(!found) { nb.style.display="block"; nb.innerText="❌ Không tìm thấy"; validatedReceiverPhone=""; }
             });
         }
     }
-    async function startAIScan() {
-        loading(true, "AI đang quét...");
-        setTimeout(() => { 
-            loading(false); 
-            document.getElementById('ai-info-detail').innerText = "Đã nhận diện CCCD thành công!";
-            document.getElementById('ai-result-board').style.display = 'flex';
-        }, 2000);
-    }
-    function finalConfirm(isTrue) {
-        const n = document.getElementById('reg-name').value, p = document.getElementById('reg-phone').value, pi = document.getElementById('reg-pin').value;
-        db.ref('users/' + p).set({ name: n, phone: p, pin: pi, balance: 50000, stk: "PTG" + Math.floor(100000 + Math.random()*900000) }).then(() => location.reload());
-    }
+
     function showPage(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function loading(s, t) { document.getElementById('loader-screen').style.display = s ? 'flex' : 'none'; document.getElementById('loader-text').innerText = t; }
     function handleLogout() { localStorage.removeItem('ptg_phone'); location.reload(); }
     window.onload = () => { const p = localStorage.getItem('ptg_phone'); if(p) startSession(p); };
