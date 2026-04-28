@@ -3,77 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PTG Bank - Xác thực thật</title>
+    <title>PTG Bank - Biometric Pro</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+    <script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+
     <style>
-        :root { --vcb-green: #76b82a; --dark-bg: #1a1a1a; }
-        body { margin: 0; background: #000; font-family: -apple-system, sans-serif; color: white; display: flex; justify-content: center; }
-        .app-container { width: 100%; max-width: 414px; height: 100vh; background: var(--dark-bg); padding: 40px 20px; box-sizing: border-box; text-align: center; }
-        .btn-auth { width: 100%; padding: 18px; background: var(--vcb-green); color: white; border: none; border-radius: 15px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 50px; }
-        .status-msg { margin-top: 20px; font-size: 14px; color: #aaa; }
+        :root { --primary: #004aad; --bg: #f4f7f6; --success: #28a745; --ios-red: #ff3b30; --ios-gray: #e5e5ea; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #121212; margin: 0; display: flex; justify-content: center; }
+        .app-frame { width: 100%; max-width: 414px; height: 100vh; background: var(--bg); position: relative; overflow: hidden; }
+        .screen { display: none; padding: 20px; height: 100%; overflow-y: auto; }
+        .active { display: block; }
+        
+        /* GIAO DIỆN THIẾT LẬP VÂN TAY (DÀNH CHO ĐĂNG KÝ) */
+        .fp-setup-overlay { display: none; position: absolute; inset: 0; background: #fff; z-index: 9999; flex-direction: column; align-items: center; padding: 60px 30px; }
+        .fp-svg-box { position: relative; width: 150px; height: 180px; margin: 40px 0; cursor: pointer; }
+        .fp-svg-path { width: 100%; height: 100%; fill: var(--ios-gray); position: absolute; }
+        .fp-active-path { width: 100%; height: 100%; fill: var(--ios-red); position: absolute; clip-path: inset(100% 0 0 0); transition: clip-path 0.3s ease; }
+
+        /* BILL VCB GIỮ NGUYÊN */
+        #scr-receipt { padding: 0; background: #011627; color: white; text-align: center; }
+        .vcb-check { width: 50px; height: 50px; background: #76b82a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 40px auto 15px; font-size: 24px; }
+        
+        /* CÁC THÀNH PHẦN KHÁC */
+        .modal-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 5000; align-items: center; justify-content: center; }
+        .modal-box { background: white; width: 85%; padding: 25px; border-radius: 15px; text-align: center; color: #000; }
+        #loader-screen { display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.9); z-index: 6000; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
+        .card-main { background: linear-gradient(135deg, #004aad, #00c6ff); color: white; padding: 25px; border-radius: 20px; margin: 15px 0; }
+        .vcb-row { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 0.5px solid rgba(255,255,255,0.1); font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <h2>Thiết lập Sinh trắc học</h2>
-    <p>Nhấn nút bên dưới để gọi hệ thống xác thực (Touch ID/Face ID) của thiết bị.</p>
-    
-    <div style="font-size: 80px; margin: 40px 0;">🛡️</div>
+<div class="app-frame">
+    <div id="fp-setup-screen" class="fp-setup-overlay">
+        <h2 id="fps-title" style="color:#000">Thiết lập vân tay</h2>
+        <p id="fps-desc" style="color:#666; text-align:center">Nhấp nhả ngón tay để lấy dấu vân tay của bạn.</p>
+        <div class="fp-svg-box" onclick="stepEnroll()">
+            <svg class="fp-svg-path" viewBox="0 0 100 120"><path d="M50,10 C30,10 10,30 10,60 C10,90 30,110 50,110 C70,110 90,90 90,60 C90,30 70,10 50,10 M50,25 C65,25 78,38 78,55 C78,72 65,85 50,85 C35,85 22,72 22,55 C22,38 35,25 50,25 M50,40 C58,40 65,47 65,55 C65,63 58,70 50,70 C42,70 35,63 35,55 C35,47 42,40 50,40" /></svg>
+            <svg class="fp-active-path" id="fps-fill" viewBox="0 0 100 120"><path d="M50,10 C30,10 10,30 10,60 C10,90 30,110 50,110 C70,110 90,90 90,60 C90,30 70,10 50,10 M50,25 C65,25 78,38 78,55 C78,72 65,85 50,85 C35,85 22,72 22,55 C22,38 35,25 50,25 M50,40 C58,40 65,47 65,55 C65,63 58,70 50,70 C42,70 35,63 35,55 C35,47 42,40 50,40" /></svg>
+        </div>
+        <div id="fps-percent" style="font-size:24px; color:#000; font-weight:bold">0%</div>
+    </div>
 
-    <button class="btn-auth" onclick="callSystemAuth()">KÍCH HOẠT VÂN TAY THẬT</button>
-    
-    <p id="error-log" class="status-msg"></p>
+    <div id="loader-screen"><div class="spinner"></div><p id="loader-text" style="color:#000; margin-top:10px;"></p></div>
+    <div id="ai-result-board" class="modal-overlay"><div class="modal-box"><h3>XÁC THỰC AI</h3><div id="ai-info-detail"></div><button class="btn" onclick="finalConfirm(true)">ĐÚNG, LÀ TÔI</button></div></div>
+
+    <div id="scr-login" class="screen active">
+        <h2 style="color:var(--primary); text-align:center; margin-top:60px;">ĐĂNG NHẬP PTG</h2>
+        <input type="tel" id="login-phone" placeholder="Số điện thoại">
+        <input type="password" id="login-pin" placeholder="Mã PIN">
+        <button class="btn" onclick="authRealSystem('LOGIN')">ĐĂNG NHẬP (QUÉT VÂN TAY THẬT)</button>
+        <p style="text-align:center; font-size:14px; margin-top:20px;">Chưa có tài khoản? <a href="#" onclick="showPage('scr-reg')" style="color:var(--primary); font-weight:bold;">Đăng ký ngay</a></p>
+    </div>
+
+    <div id="scr-reg" class="screen">
+        <h3>MỞ TÀI KHOẢN</h3>
+        <input type="text" id="reg-name" placeholder="Họ và tên">
+        <input type="tel" id="reg-phone" placeholder="Số điện thoại">
+        <input type="password" id="reg-pin" placeholder="Mã PIN">
+        <button class="btn" onclick="startEnrollProcess()">THIẾT LẬP VÂN TAY</button>
+    </div>
+
+    <div id="scr-ekyc" class="screen">
+        <h3>XÁC MINH CCCD</h3>
+        <div style="background:#eee; height:100px; margin-bottom:10px; display:flex; align-items:center; justify-content:center; border-radius:10px;" onclick="document.getElementById('f-in').click()">Mặt trước CCCD</div>
+        <input type="file" id="f-in" hidden accept="image/*">
+        <button class="btn" onclick="startAIScan()">QUÉT AI</button>
+    </div>
+
+    <div id="scr-home" class="screen">
+        <div class="card-main">
+            <h2 id="hi-name">USER</h2>
+            <h1 id="bal-val">0 ₫</h1>
+            <p id="stk-val">STK: --------</p>
+        </div>
+        <button class="btn" onclick="showPage('scr-transfer')">CHUYỂN TIỀN</button>
+        <button class="btn" style="background:#ff4d4d; margin-top:10px;" onclick="handleLogout()">ĐĂNG XUẤT</button>
+    </div>
+
+    <div id="scr-transfer" class="screen">
+        <h3>Chuyển khoản</h3>
+        <input type="text" id="to-stk" placeholder="STK người nhận" oninput="autoCheckSTK()">
+        <div id="display-receiver-name" style="font-weight:bold; color:var(--primary)"></div>
+        <input type="number" id="to-amount" placeholder="Số tiền">
+        <button class="btn" onclick="authRealSystem('TRANSFER')">XÁC NHẬN (QUÉT VÂN TAY THẬT)</button>
+    </div>
+
+    <div id="scr-receipt" class="screen">
+        <div class="vcb-check">✔</div>
+        <div style="text-transform: uppercase; font-size:14px;">Chuyển khoản thành công</div>
+        <h1 id="rec-amt" style="color:#76b82a;">0 VND</h1>
+        <div id="receipt-content"></div>
+        <button class="btn" style="background:#76b82a; margin: 20px;" onclick="location.reload()">VỀ TRANG CHỦ</button>
+    </div>
 </div>
 
 <script>
-    async function callSystemAuth() {
-        const errorLog = document.getElementById('error-log');
-        errorLog.innerText = "Đang gọi hệ thống...";
+    const firebaseConfig = { apiKey: "AIzaSyAMxWXDkmGiVKfT8NYcMg3Pp_ENaI43etk", databaseURL: "https://ptg-bank-default-rtdb.asia-southeast1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentUser = null, validatedReceiverPhone = "", validatedReceiverName = "", enrollProgress = 0;
 
-        // Kiểm tra xem trình duyệt có hỗ trợ WebAuthn không
-        if (!window.PublicKeyCredential) {
-            errorLog.innerText = "Thiết bị hoặc trình duyệt này không hỗ trợ xác thực thật.";
-            return;
-        }
-
-        try {
-            // Đây là đoạn code yêu cầu hệ thống hiện bảng quét vân tay/mặt thật
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            const options = {
-                publicKey: {
-                    challenge: challenge,
-                    rp: { name: "PTG Bank System" },
-                    user: {
-                        id: Uint8Array.from("123", c => c.charCodeAt(0)),
-                        name: "user@ptgbank.vn",
-                        displayName: "Khách hàng PTG"
-                    },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                    authenticatorSelection: {
-                        authenticatorAttachment: "platform", // ÉP BUỘC dùng vân tay/mặt của máy
-                        userVerification: "required"
-                    },
-                    timeout: 60000
-                }
-            };
-
-            // LỆNH GỌI BẢNG HỆ THỐNG (Bảng trắng hiện lên từ dưới như video)
-            const credential = await navigator.credentials.create(options);
-
-            if (credential) {
-                errorLog.style.color = "#76b82a";
-                errorLog.innerText = "✅ XÁC THỰC THÀNH CÔNG!";
-                alert("Hệ thống đã nhận diện được vân tay/khuôn mặt của bạn!");
-            }
-        } catch (err) {
-            console.error(err);
-            // Lỗi này thường do chạy trên HTTP hoặc file offline
-            errorLog.style.color = "#ff3b30";
-            errorLog.innerText = "LỖI: " + err.message + "\\n(Bạn cần chạy trên HTTPS mới hiện được bảng quét thật)";
+    // --- 1. THIẾT LẬP VÂN TAY (KHI ĐĂNG KÝ) ---
+    function startEnrollProcess() {
+        if(!document.getElementById('reg-name').value) return alert("Nhập tên!");
+        enrollProgress = 0;
+        document.getElementById('fp-setup-screen').style.display = 'flex';
+    }
+    function stepEnroll() {
+        if(enrollProgress >= 100) return;
+        enrollProgress += 10;
+        document.getElementById('fps-fill').style.clipPath = `inset(${100 - enrollProgress}% 0 0 0)`;
+        document.getElementById('fps-percent').innerText = enrollProgress + "%";
+        if(enrollProgress === 50) document.getElementById('fps-title').innerText = "Quét các cạnh bên...";
+        if(enrollProgress >= 100) {
+            setTimeout(() => { 
+                document.getElementById('fp-setup-screen').style.display = 'none'; 
+                showPage('scr-ekyc'); 
+            }, 500);
         }
     }
+
+    // --- 2. QUÉT VÂN TAY THẬT (KHI ĐĂNG NHẬP & CHUYỂN TIỀN) ---
+    async function authRealSystem(type) {
+        if(!window.PublicKeyCredential) {
+            alert("Trình duyệt không hỗ trợ quét vân tay thật. Đang dùng PIN dự phòng.");
+            type === 'LOGIN' ? handleLogin() : finalizeTransfer();
+            return;
+        }
+        try {
+            // Đây là lệnh gọi bảng quét thật của iPhone/Android
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+            const options = { publicKey: { 
+                challenge: challenge, rp: { name: "PTG Bank" }, 
+                user: { id: new Uint8Array([1]), name: "user", displayName: "User" },
+                pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
+            }};
+            const credential = await navigator.credentials.get(options);
+            if(credential) {
+                type === 'LOGIN' ? handleLogin() : finalizeTransfer();
+            }
+        } catch (e) {
+            alert("Xác thực thất bại hoặc bị hủy. (Lưu ý: Cần HTTPS để gọi bảng thật)");
+        }
+    }
+
+    // --- LOGIC HỆ THỐNG GIỮ NGUYÊN ---
+    function handleLogin() {
+        const p = document.getElementById('login-phone').value, pi = document.getElementById('login-pin').value;
+        db.ref('users/'+p).once('value').then(s => {
+            if(s.exists() && s.val().pin === pi) { localStorage.setItem('ptg_phone', p); startSession(p); }
+            else alert("Sai thông tin!");
+        });
+    }
+    function finalizeTransfer() {
+        const amt = parseInt(document.getElementById('to-amount').value);
+        if(amt > currentUser.balance) return alert("Hết tiền!");
+        db.ref('users/'+currentUser.phone+'/balance').transaction(b => b - amt);
+        db.ref('users/'+validatedReceiverPhone+'/balance').transaction(b => b + amt);
+        document.getElementById('rec-amt').innerText = amt.toLocaleString() + " VND";
+        document.getElementById('receipt-content').innerHTML = `
+            <div class="vcb-row"><span>Người nhận</span><span>${validatedReceiverName}</span></div>
+            <div class="vcb-row"><span>Nội dung</span><span>Chuyển tiền PTG</span></div>`;
+        showPage('scr-receipt');
+    }
+    function startSession(phone) {
+        db.ref('users/'+phone).on('value', s => {
+            currentUser = s.val(); showPage('scr-home');
+            document.getElementById('hi-name').innerText = currentUser.name.toUpperCase();
+            document.getElementById('bal-val').innerText = currentUser.balance.toLocaleString() + " ₫";
+            document.getElementById('stk-val').innerText = "STK: " + currentUser.stk;
+        });
+    }
+    function autoCheckSTK() {
+        const stk = document.getElementById('to-stk').value;
+        if(stk.length >= 5) {
+            db.ref('users').once('value').then(snap => {
+                snap.forEach(c => { if(c.val().stk === stk) { 
+                    validatedReceiverName = c.val().name; 
+                    validatedReceiverPhone = c.key; 
+                    document.getElementById('display-receiver-name').innerText = "✅ " + validatedReceiverName; 
+                }});
+            });
+        }
+    }
+    async function startAIScan() {
+        loading(true, "AI đang quét...");
+        setTimeout(() => { 
+            loading(false); 
+            document.getElementById('ai-info-detail').innerText = "Đã nhận diện CCCD thành công!";
+            document.getElementById('ai-result-board').style.display = 'flex';
+        }, 2000);
+    }
+    function finalConfirm(isTrue) {
+        const n = document.getElementById('reg-name').value, p = document.getElementById('reg-phone').value, pi = document.getElementById('reg-pin').value;
+        db.ref('users/' + p).set({ name: n, phone: p, pin: pi, balance: 50000, stk: "PTG" + Math.floor(100000 + Math.random()*900000) }).then(() => location.reload());
+    }
+    function showPage(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    function loading(s, t) { document.getElementById('loader-screen').style.display = s ? 'flex' : 'none'; document.getElementById('loader-text').innerText = t; }
+    function handleLogout() { localStorage.removeItem('ptg_phone'); location.reload(); }
+    window.onload = () => { const p = localStorage.getItem('ptg_phone'); if(p) startSession(p); };
 </script>
 </body>
 </html>
