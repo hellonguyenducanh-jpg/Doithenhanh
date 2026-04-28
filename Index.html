@@ -3,68 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chúc mừng 8/3 Lớp 6A2</title>
+    <title>PTG Bank - Xác thực thật</title>
     <style>
-        body {
-            background-color: #ffeef8;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        .card {
-            background: white;
-            max-width: 500px;
-            margin: auto;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: 5px solid #ff85a2;
-        }
-        h1 { color: #d81b60; font-size: 24px; }
-        p { color: #555; line-height: 1.6; font-size: 18px; }
-        .heart { color: #ff4d6d; font-size: 50px; animation: beat 1s infinite; }
-        @keyframes beat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-        .btn {
-            background: #ff85a2;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 20px;
-        }
-        .flower { font-size: 30px; }
+        :root { --vcb-green: #76b82a; --dark-bg: #1a1a1a; }
+        body { margin: 0; background: #000; font-family: -apple-system, sans-serif; color: white; display: flex; justify-content: center; }
+        .app-container { width: 100%; max-width: 414px; height: 100vh; background: var(--dark-bg); padding: 40px 20px; box-sizing: border-box; text-align: center; }
+        .btn-auth { width: 100%; padding: 18px; background: var(--vcb-green); color: white; border: none; border-radius: 15px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 50px; }
+        .status-msg { margin-top: 20px; font-size: 14px; color: #aaa; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="flower">🌸🌷🌹</div>
-        <h1>MỪNG NGÀY QUỐC TẾ PHỤ NỮ 8/3</h1>
-        <div class="heart">❤️</div>
-        
-        <p><strong>Kính gửi Cô giáo chủ nhiệm và các bạn nữ 6A2!</strong></p>
-        
-        <p>Nhân ngày 8/3, thay mặt các bạn nam trong lớp, xin chúc Cô luôn trẻ trung, hạnh phúc và thành công. Chúc các bạn nữ 6A2 ngày càng xinh xắn, học giỏi và luôn rạng rỡ như những bông hoa tươi thắm nhất!</p>
-        
-        <p><em>"Cảm ơn vì đã là một phần tuyệt vời của 6A2!"</em></p>
-        
-        <div class="flower">🎁✨💌</div>
-        <button class="btn" onclick="celebrate()">Nhấn để xem điều bất ngờ!</button>
-    </div>
+<div class="app-container">
+    <h2>Thiết lập Sinh trắc học</h2>
+    <p>Nhấn nút bên dưới để gọi hệ thống xác thực (Touch ID/Face ID) của thiết bị.</p>
+    
+    <div style="font-size: 80px; margin: 40px 0;">🛡️</div>
 
-    <script>
-        function celebrate() {
-            alert("Chúc cô và các bạn một ngày 8/3 ngập tràn niềm vui và quà tặng! 🎉🎊");
+    <button class="btn-auth" onclick="callSystemAuth()">KÍCH HOẠT VÂN TAY THẬT</button>
+    
+    <p id="error-log" class="status-msg"></p>
+</div>
+
+<script>
+    async function callSystemAuth() {
+        const errorLog = document.getElementById('error-log');
+        errorLog.innerText = "Đang gọi hệ thống...";
+
+        // Kiểm tra xem trình duyệt có hỗ trợ WebAuthn không
+        if (!window.PublicKeyCredential) {
+            errorLog.innerText = "Thiết bị hoặc trình duyệt này không hỗ trợ xác thực thật.";
+            return;
         }
-    </script>
 
+        try {
+            // Đây là đoạn code yêu cầu hệ thống hiện bảng quét vân tay/mặt thật
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+
+            const options = {
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "PTG Bank System" },
+                    user: {
+                        id: Uint8Array.from("123", c => c.charCodeAt(0)),
+                        name: "user@ptgbank.vn",
+                        displayName: "Khách hàng PTG"
+                    },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform", // ÉP BUỘC dùng vân tay/mặt của máy
+                        userVerification: "required"
+                    },
+                    timeout: 60000
+                }
+            };
+
+            // LỆNH GỌI BẢNG HỆ THỐNG (Bảng trắng hiện lên từ dưới như video)
+            const credential = await navigator.credentials.create(options);
+
+            if (credential) {
+                errorLog.style.color = "#76b82a";
+                errorLog.innerText = "✅ XÁC THỰC THÀNH CÔNG!";
+                alert("Hệ thống đã nhận diện được vân tay/khuôn mặt của bạn!");
+            }
+        } catch (err) {
+            console.error(err);
+            // Lỗi này thường do chạy trên HTTP hoặc file offline
+            errorLog.style.color = "#ff3b30";
+            errorLog.innerText = "LỖI: " + err.message + "\\n(Bạn cần chạy trên HTTPS mới hiện được bảng quét thật)";
+        }
+    }
+</script>
 </body>
 </html>
