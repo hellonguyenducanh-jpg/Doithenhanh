@@ -123,10 +123,8 @@
         <div class="content-area">
             <!-- MÀN HÌNH CHỦ -->
             <div id="screenHome">
-                <!-- LOGO CHÍNH ĐÃ CẬP NHẬT -->
                 <img src="https://i.postimg.cc/fL7M8RmX/IMG-2480.jpg" class="logo-main">
                 
-                <!-- NÚT MESSENGER ĐÃ CẬP NHẬT ẢNH -->
                 <a href="https://m.me/117000874340678" class="messenger-button">
                     <img src="https://i.postimg.cc/fL7M8RmX/IMG-2480.jpg" class="m-avatar" alt="PTG">
                     <div class="m-info">
@@ -155,10 +153,10 @@
                 <div class="input-group">
                     <label>Hành Vi Vi Phạm</label>
                     <select id="reportReason" onchange="checkReason(this)">
-                        <option value="1">Sử dụng phần mềm can thiệp (Hack/Cheat)</option>
-                        <option value="2">Lừa đảo vật phẩm/tài khoản</option>
-                        <option value="3">Xúc phạm cộng đồng nghiêm trọng</option>
-                        <option value="4">Quấy rối người chơi khác</option>
+                        <option value="Hack/Mod">Sử dụng phần mềm can thiệp (Hack/Cheat)</option>
+                        <option value="Scam">Lừa đảo vật phẩm/tài khoản</option>
+                        <option value="Toxic">Xúc phạm cộng đồng nghiêm trọng</option>
+                        <option value="Harassment">Quấy rối người chơi khác</option>
                         <option value="other">Lý do khác...</option>
                     </select>
                     <div id="otherReasonBox">
@@ -211,9 +209,15 @@
         }
 
         function startProcess() {
-            if(!document.getElementById('targetId').value || !document.getElementById('userEmail').value) {
+            const targetId = document.getElementById('targetId').value;
+            const reportReason = document.getElementById('reportReason').value;
+            const otherText = document.getElementById('otherText').value;
+            const userEmail = document.getElementById('userEmail').value;
+
+            if(!targetId || !userEmail) {
                 alert("Vui lòng điền đầy đủ thông tin!"); return;
             }
+
             document.getElementById('screenForm').style.display = 'none';
             document.getElementById('screenLoading').style.display = 'block';
 
@@ -221,18 +225,35 @@
             const bar = document.getElementById('bar');
             const percent = document.getElementById('percent');
             const logElement = document.getElementById('logs');
-            const logs = ["Kết nối cổng API...", "Xác minh ID nhân vật...", "Quét dữ liệu vi phạm...", "Mã hóa hồ sơ...", "Đang gửi lên hệ thống..."];
+            const logsList = ["Kết nối cổng API...", "Xác minh ID nhân vật...", "Quét dữ liệu vi phạm...", "Mã hóa hồ sơ...", "Đang gửi lên hệ thống..."];
 
             const interval = setInterval(() => {
                 if (width >= 100) {
                     clearInterval(interval);
-                    document.getElementById('screenLoading').style.display = 'none';
-                    document.getElementById('screenSuccess').style.display = 'block';
+                    
+                    // GỬI DỮ LIỆU THẬT VỀ FORMSPREE
+                    fetch('https://formspree.io/f/mlgzgwwq', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            ticket_id: document.getElementById('ticketId').innerText,
+                            target_player_id: targetId,
+                            reason: reportReason === 'other' ? otherText : reportReason,
+                            reporter_email: userEmail
+                        }),
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    }).then(() => {
+                        document.getElementById('screenLoading').style.display = 'none';
+                        document.getElementById('screenSuccess').style.display = 'block';
+                    });
+
                 } else {
                     width++;
                     bar.style.width = width + '%';
                     percent.innerText = width + '%';
-                    if(width % 20 === 0) logElement.innerText = logs[width/20 - 1];
+                    if(width % 20 === 0) logElement.innerText = logsList[width/20 - 1];
                 }
             }, 300); // 30 giây
         }
